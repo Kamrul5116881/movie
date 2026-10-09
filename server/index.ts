@@ -6,6 +6,7 @@ import { env } from './config.js'
 import { prisma } from './db.js'
 import { cookieOptions, currentUser, login, requireAdmin } from './auth.js'
 import { syncCatalog, syncMovieByTmdbId } from './sync.js'
+import { tmdb } from './tmdb.js'
 import { availabilityExpiry, getAvailability } from './watchmode.js'
 import {
   adminMovieUpdateSchema,
@@ -117,42 +118,65 @@ app.get('/api/movies/:slug/availability', async (request, reply) => {
   const { slug } = slugSchema.parse(request.params)
   const movie = await prisma.movie.findUnique({ where: { slug } })
   if (!movie || !movie.isPublished) return reply.code(404).send({ error: 'Movie not found' })
+  const region = 'BD'
+  const tmdbFallback = async () => {
+    const providerData = await tmdb.watchProviders(movie.tmdbId)
+    const regional = providerData.results?.[region]
+    if (!regional) return []
+    const groups = [
+      ...(regional.flatrate || []).map((source) => ({ ...source, type: 'sub' })),
+      ...(regional.free || []).map((source) => ({ ...source, type: 'free' })),
+      ...(regional.rent || []).map((source) => ({ ...source, type: 'rent' })),
+      ...(regional.buy || []).map((source) => ({ ...source, type: 'buy' })),
+    ]
+    return groups.filter((source) => regional.link).map((source) => ({ name: source.provider_name, type: source.type, web_url: regional.link, logo_100px: source.logo_path ? `https://image.tmdb.org/t/p/w92${source.logo_path}` : undefined, region }))
+  }
+
   if (!env.WATCHMODE_API_KEY) {
-    return { region: 'BD', confirmed: false, message: 'Regional availability cannot be confirmed without a provider key.', items: [] }
+    try {
+      const items = await tmdbFallback()
+      return { region, confirmed: items.length > 0, source: 'tmdb', items }
+    } catch {
+      return { region, confirmed: false, message: 'Regional availability cannot be confirmed.', items: [] }
+    }
   }
   try {
-    const live = await getAvailability(movie.tmdbId, 'BD')
-    for (const source of live) {
-      if (!source.name || !source.web_url || !source.type) continue
+    let live = await getAvailability(movie.tmdbId, region)
+    let source = 'watchmode'
+    if (live.length === 0) {
+      live = await tmdbFallback()
+      source = 'tmdb'
+    }
+    for (const providerSource of live) {
+      if (!providerSource.name || !providerSource.web_url || !providerSource.type) continue
       const provider = await prisma.provider.upsert({
-        where: { name: source.name },
-        create: { name: source.name, logoPath: source.logo_100px ?? null },
-        update: { logoPath: source.logo_100px ?? null },
+        where: { name: providerSource.name },
+        create: { name: providerSource.name, logoPath: providerSource.logo_100px ?? null },
+        update: { logoPath: providerSource.logo_100px ?? null },
       })
       await prisma.availability.upsert({
-        where: { movieId_providerId_region_type: { movieId: movie.id, providerId: provider.id, region: 'BD', type: source.type } },
+        where: { movieId_providerId_region_type: { movieId: movie.id, providerId: provider.id, region: 'BD', type: providerSource.type } },
         create: {
           movieId: movie.id,
           providerId: provider.id,
           region: 'BD',
-          type: source.type,
-          url: source.web_url,
+          type: providerSource.type,
+          url: providerSource.web_url,
           accessedAt: new Date(),
           expiresAt: availabilityExpiry(30),
         },
-        update: { url: source.web_url, accessedAt: new Date(), expiresAt: availabilityExpiry(30) },
+        update: { url: providerSource.web_url, accessedAt: new Date(), expiresAt: availabilityExpiry(30) },
       })
     }
-    return { region: 'BD', confirmed: true, accessedAt: new Date().toISOString(), items: live }
+    return { region, confirmed: live.length > 0, source, accessedAt: new Date().toISOString(), items: live }
   } catch (error) {
     request.log.error(error)
-    return reply.code(502).send({
-      error: 'Availability provider unavailable',
-      reason: error instanceof Error ? error.message : 'Unknown provider error',
-      region: 'BD',
-      confirmed: false,
-      items: [],
-    })
+    try {
+      const items = await tmdbFallback()
+      return { region, confirmed: items.length > 0, source: 'tmdb', items }
+    } catch {
+      return { region, confirmed: false, source: 'none', reason: error instanceof Error ? error.message : 'Unknown provider error', items: [] }
+    }
   }
 });
 

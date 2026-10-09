@@ -82,6 +82,8 @@ export type TmdbCredits = {
 export type TmdbGenre = { id: number; name: string }
 export type TmdbPaginated<T> = { page: number; results: T[]; total_pages: number; total_results: number }
 export type TmdbConfig = { images: { secure_base_url: string; poster_sizes: string[]; backdrop_sizes: string[] } }
+export type TmdbWatchProvider = { provider_id: number; provider_name: string; logo_path?: string; display_priority?: number }
+export type TmdbWatchProviders = { results?: Record<string, { link?: string; flatrate?: TmdbWatchProvider[]; rent?: TmdbWatchProvider[]; buy?: TmdbWatchProvider[]; free?: TmdbWatchProvider[] }> }
 
 export const LANGUAGE_FILTERS = {
   hindi: { with_original_language: 'hi' },
@@ -105,6 +107,7 @@ export const tmdb = {
   recommendations: (id: number, page = 1) => request<TmdbPaginated<TmdbMovie>>(`/movie/${id}/recommendations`, { page }),
   similar: (id: number, page = 1) => request<TmdbPaginated<TmdbMovie>>(`/movie/${id}/similar`, { page }),
   configuration: () => request<TmdbConfig>('/configuration'),
+  watchProviders: (id: number) => request<TmdbWatchProviders>(`/movie/${id}/watch/providers`),
 }
 
 export function selectTrailer(videos: TmdbVideo[] = []): TmdbVideo | null {
