@@ -1,0 +1,53 @@
+{
+  "name": "movie",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "server": "tsx server/index.ts",
+    "server:check": "tsc -p tsconfig.server.json --noEmit",
+    "build:server": "tsc -p tsconfig.server.json && node scripts/copy-prisma.mjs",
+    "start": "node dist-server/server/index.js",
+    "admin:create": "tsx server/scripts/create-admin.ts",
+    "db:generate": "prisma generate",
+    "db:script": "prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script",
+    "db:script:file": "prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script > supabase/schema.sql",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "test": "vitest run",
+    "build": "vite build",
+    "lint": "eslint .",
+    "preview": "vite preview"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@fastify/cookie": "^11.1.3",
+    "@fastify/cors": "^11.3.1",
+    "@fastify/rate-limit": "^11.2.1",
+    "@prisma/client": "^6.16.2",
+    "argon2": "^0.45.1",
+    "fastify": "^5.12.5",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^26.6.4",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.4",
+    "eslint": "^10.8.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.3",
+    "globals": "^17.7.0",
+    "prisma": "^6.16.2",
+    "tsx": "^4.23.15",
+    "typescript": "^6.0.3",
+    "vite": "^8.2.0",
+    "vitest": "^5.0.3"
+  }
+}

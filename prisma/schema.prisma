@@ -1,0 +1,206 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum JobStatus {
+  QUEUED
+  RUNNING
+  SUCCESS
+  FAILED
+}
+
+model Movie {
+  id               Int            @id @default(autoincrement())
+  tmdbId           Int            @unique
+  slug             String         @unique
+  title            String
+  originalTitle    String?
+  originalLanguage String?
+  overview         String?
+  releaseDate      DateTime?
+  runtimeMinutes   Int?
+  posterPath       String?
+  backdropPath     String?
+  tmdbRating       Float?
+  tmdbVoteCount    Int?
+  popularity       Float?
+  adultContent     Boolean        @default(false)
+  isPublished      Boolean        @default(true)
+  metadataSource   String         @default("tmdb")
+  lastSyncedAt     DateTime?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  genres           MovieGenre[]
+  cast             MovieCast[]
+  trailers         Trailer[]
+  watchlists       Watchlist[]
+  availability     Availability[]
+
+  @@index([originalLanguage])
+  @@index([releaseDate])
+  @@index([tmdbRating])
+  @@index([isPublished])
+  @@index([popularity])
+}
+
+model Genre {
+  id     Int          @id @default(autoincrement())
+  tmdbId Int?         @unique
+  name   String       @unique
+  slug   String       @unique
+  movies MovieGenre[]
+}
+
+model MovieGenre {
+  movieId Int
+  genreId Int
+  movie   Movie @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  genre   Genre @relation(fields: [genreId], references: [id], onDelete: Cascade)
+
+  @@id([movieId, genreId])
+}
+
+model Person {
+  id          Int         @id @default(autoincrement())
+  tmdbId      Int?        @unique
+  name        String
+  profilePath String?
+  movies      MovieCast[]
+}
+
+model MovieCast {
+  id          Int     @id @default(autoincrement())
+  movieId     Int
+  personId    Int
+  character   String?
+  job         String?
+  department  String?
+  order       Int     @default(0)
+  movie       Movie   @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  person      Person  @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@unique([movieId, personId, character])
+  @@index([movieId, order])
+}
+
+model Trailer {
+  id          Int       @id @default(autoincrement())
+  movieId     Int
+  provider    String
+  videoKey    String
+  name        String?
+  type        String?
+  official    Boolean   @default(false)
+  publishedAt DateTime?
+  movie       Movie     @relation(fields: [movieId], references: [id], onDelete: Cascade)
+
+  @@unique([movieId, provider, videoKey])
+}
+
+model Provider {
+  id           Int            @id @default(autoincrement())
+  name         String         @unique
+  logoPath     String?
+  availability Availability[]
+}
+
+model Availability {
+  id         Int       @id @default(autoincrement())
+  movieId    Int
+  providerId Int
+  region     String
+  type       String
+  url        String?
+  accessedAt DateTime?
+  expiresAt  DateTime?
+  movie      Movie     @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  provider   Provider  @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@index([movieId, region])
+  @@unique([movieId, providerId, region, type])
+}
+
+model User {
+  id           Int         @id @default(autoincrement())
+  email        String      @unique
+  passwordHash String
+  role         Role        @default(USER)
+  createdAt    DateTime    @default(now())
+  sessions     Session[]
+  watchlists   Watchlist[]
+}
+
+model Session {
+  id        String   @id
+  tokenHash String   @unique
+  userId    Int
+  expiresAt DateTime
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+}
+
+model Watchlist {
+  userId    Int
+  movieId   Int
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  movie     Movie    @relation(fields: [movieId], references: [id], onDelete: Cascade)
+
+  @@id([userId, movieId])
+}
+
+model SyncJob {
+  id             BigInt    @id @default(autoincrement())
+  type           String
+  status         JobStatus @default(QUEUED)
+  processedCount Int       @default(0)
+  errorMessage   String?
+  startedAt      DateTime?
+  finishedAt     DateTime?
+  createdAt      DateTime  @default(now())
+  errors         SyncError[]
+
+  @@index([status, type])
+}
+
+model SyncError {
+  id        BigInt   @id @default(autoincrement())
+  jobId     BigInt
+  message   String
+  context   String?
+  createdAt DateTime @default(now())
+  job       SyncJob  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+}
+
+model AppSetting {
+  key       String   @id
+  value     String?
+  updatedAt DateTime @updatedAt
+}
+
+model AuditLog {
+  id        BigInt   @id @default(autoincrement())
+  userId    Int?
+  action    String
+  entity    String?
+  entityId  String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([action])
+}

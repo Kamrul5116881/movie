@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "rootDir": ".",
+    "outDir": "dist-server",
+    "types": ["node"]
+  },
+  "include": ["server/**/*.ts", "src/generated/prisma/**/*.ts"],
+  "exclude": ["**/*.test.ts", "node_modules", "dist-server"]
+}
