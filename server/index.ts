@@ -146,7 +146,13 @@ app.get('/api/movies/:slug/availability', async (request, reply) => {
     return { region: 'BD', confirmed: true, accessedAt: new Date().toISOString(), items: live }
   } catch (error) {
     request.log.error(error)
-    return reply.code(502).send({ error: 'Availability provider unavailable', region: 'BD', confirmed: false, items: [] })
+    return reply.code(502).send({
+      error: 'Availability provider unavailable',
+      reason: error instanceof Error ? error.message : 'Unknown provider error',
+      region: 'BD',
+      confirmed: false,
+      items: [],
+    })
   }
 });
 
