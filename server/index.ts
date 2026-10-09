@@ -156,11 +156,11 @@ app.get('/api/movies/:slug/availability', async (request, reply) => {
         update: { logoPath: providerSource.logo_100px ?? null },
       })
       await prisma.availability.upsert({
-        where: { movieId_providerId_region_type: { movieId: movie.id, providerId: provider.id, region: 'BD', type: providerSource.type } },
+        where: { movieId_providerId_region_type: { movieId: movie.id, providerId: provider.id, region, type: providerSource.type } },
         create: {
           movieId: movie.id,
           providerId: provider.id,
-          region: 'BD',
+          region,
           type: providerSource.type,
           url: providerSource.web_url,
           accessedAt: new Date(),
