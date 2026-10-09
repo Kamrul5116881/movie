@@ -24,7 +24,7 @@ function toParams(params = {}) {
 export const api = {
   movies: (params = {}) => request(`/api/movies?${toParams(params)}`),
   movie: (slug) => request(`/api/movies/${encodeURIComponent(slug)}`),
-  availability: (slug) => request(`/api/movies/${encodeURIComponent(slug)}/availability`),
+  availability: (slug, region = 'BD') => request(`/api/movies/${encodeURIComponent(slug)}/availability?region=${encodeURIComponent(region)}`),
   genres: () => request('/api/genres'),
   login: (credentials) => request('/api/auth/login', { method: 'POST', body: JSON.stringify(credentials) }),
   me: () => request('/api/auth/me'),

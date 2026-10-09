@@ -107,6 +107,7 @@ function App() {
   const [selected, setSelected] = useState(null)
   const [availability, setAvailability] = useState(null)
   const [availLoading, setAvailLoading] = useState(false)
+  const [region, setRegion] = useState('BD')
   const [watchlist, setWatchlist] = useState(() => {
     try { return JSON.parse(localStorage.getItem('cinevault-watchlist') || '[]') } catch { return [] }
   })
@@ -140,11 +141,18 @@ function App() {
   const openMovie = useCallback((movie) => {
     setSelected(normalizeMovie(movie))
     setAvailability(null)
-    if (hasApi() && movie.slug) {
-      setAvailLoading(true)
-      api.availability(movie.slug).then(setAvailability).catch(() => setAvailability({ confirmed: false, items: [] })).finally(() => setAvailLoading(false))
-    }
   }, [])
+
+  useEffect(() => {
+    if (!hasApi() || !selected?.slug) return
+    let cancelled = false
+    setAvailLoading(true)
+    api.availability(selected.slug, region)
+      .then((data) => { if (!cancelled) setAvailability(data) })
+      .catch(() => { if (!cancelled) setAvailability({ confirmed: false, items: [], region }) })
+      .finally(() => { if (!cancelled) setAvailLoading(false) })
+    return () => { cancelled = true }
+  }, [selected, region])
 
   const trailerUrl = selected?.trailer || (() => {
     const t = selected?.trailers?.find((x) => x.provider === 'YouTube' && x.videoKey)
@@ -312,10 +320,11 @@ function App() {
                 <button className="primary-button" onClick={() => window.open(trailerUrl, '_blank', 'noopener,noreferrer')}><Icon name="play" size={15} /> View trailer</button>
               ) : (<span className="trailer-unavailable">Trailer not available</span>)}
               <div style={{ marginTop: 16 }}>
+                <label className="region-picker">Check region <select value={region} onChange={(e) => setRegion(e.target.value)}><option value="BD">Bangladesh (BD)</option><option value="IN">India (IN)</option><option value="US">United States (US)</option><option value="GB">United Kingdom (GB)</option><option value="CA">Canada (CA)</option><option value="AU">Australia (AU)</option></select></label>
                 {availLoading ? (<span className="admin-muted">Checking regional availability...</span>) : availability ? (
                   availability.confirmed && availability.items?.length ? (
                     <span className="admin-muted">Available on {availability.items.map((s) => s.name).slice(0, 3).join(', ')} ({availability.region})</span>
-                  ) : (<span className="admin-muted">Regional availability cannot be confirmed.</span>)
+                  ) : (<span className="admin-muted">No confirmed provider listing for {availability.region || region}.</span>)
                 ) : hasApi() ? (<span className="admin-muted">Availability loads for API titles.</span>) : null}
               </div>
             </div>

@@ -2,6 +2,7 @@ import Fastify from 'fastify'
 import cookie from '@fastify/cookie'
 import cors from '@fastify/cors'
 import rateLimit from '@fastify/rate-limit'
+import { z } from 'zod'
 import { env } from './config.js'
 import { prisma } from './db.js'
 import { cookieOptions, currentUser, login, requireAdmin } from './auth.js'
@@ -116,9 +117,9 @@ app.get('/api/movies/:slug', async (request, reply) => {
 
 app.get('/api/movies/:slug/availability', async (request, reply) => {
   const { slug } = slugSchema.parse(request.params)
+  const { region } = z.object({ region: z.enum(['BD', 'IN', 'US', 'GB', 'CA', 'AU']).default('BD') }).parse(request.query)
   const movie = await prisma.movie.findUnique({ where: { slug } })
   if (!movie || !movie.isPublished) return reply.code(404).send({ error: 'Movie not found' })
-  const region = 'BD'
   const tmdbFallback = async () => {
     const providerData = await tmdb.watchProviders(movie.tmdbId)
     const regional = providerData.results?.[region]
