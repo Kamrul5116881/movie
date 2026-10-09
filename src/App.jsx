@@ -323,7 +323,7 @@ function App() {
                 <label className="region-picker">Check region <select value={region} onChange={(e) => setRegion(e.target.value)}><option value="BD">Bangladesh (BD)</option><option value="IN">India (IN)</option><option value="US">United States (US)</option><option value="GB">United Kingdom (GB)</option><option value="CA">Canada (CA)</option><option value="AU">Australia (AU)</option></select></label>
                 {availLoading ? (<span className="admin-muted">Checking regional availability...</span>) : availability ? (
                   availability.confirmed && availability.items?.length ? (
-                    <span className="admin-muted">Available on {availability.items.map((s) => s.name).slice(0, 3).join(', ')} ({availability.region})</span>
+                    <div className="provider-links"><span className="admin-muted">Official options ({availability.region})</span><div>{availability.items.slice(0, 5).map((provider, index) => (<a className="provider-link" key={`${provider.name}-${provider.type}-${index}`} href={provider.web_url} target="_blank" rel="noopener noreferrer">Watch on {provider.name} <small>{provider.type}</small></a>))}</div></div>
                   ) : (<span className="admin-muted">No confirmed provider listing for {availability.region || region}.</span>)
                 ) : hasApi() ? (<span className="admin-muted">Availability loads for API titles.</span>) : null}
               </div>
