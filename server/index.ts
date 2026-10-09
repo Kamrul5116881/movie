@@ -19,7 +19,14 @@ import {
 const app = Fastify({ logger: true })
 
 await app.register(cookie)
-await app.register(cors, { origin: env.APP_BASE_URL, credentials: true })
+await app.register(cors, {
+  origin: (origin, callback) => {
+    const allowed = new Set([env.APP_BASE_URL, 'https://hdmovies.site.je'])
+    if (!origin || allowed.has(origin)) return callback(null, true)
+    return callback(new Error('Origin not allowed'), false)
+  },
+  credentials: true,
+})
 await app.register(rateLimit, { max: 120, timeWindow: '1 minute' })
 
 app.addHook('onSend', async (_request, reply) => {
@@ -288,3 +295,8 @@ app.listen({ port: env.PORT, host: '0.0.0.0' }).catch((error) => {
   app.log.error(error)
   process.exit(1)
 })
+
+// Populate an empty production catalog after the API is ready; later updates use the scheduler.
+if (env.NODE_ENV === 'production') {
+  setTimeout(() => syncCatalog('trending', 1).catch((error) => app.log.error(error)), 5000).unref()
+}
