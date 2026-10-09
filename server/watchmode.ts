@@ -15,16 +15,16 @@ export async function getAvailability(tmdbId: number, region = 'BD'): Promise<Wa
 
   const key = encodeURIComponent(env.WATCHMODE_API_KEY)
   const searchResponse = await fetch(
-    `https://api.watchmode.com/v1/search/?apiKey=${key}&search_field=tmdb_id&search_value=${encodeURIComponent(tmdbId)}`,
+    `https://api.watchmode.com/v1/search/?apiKey=${key}&search_field=tmdb_movie_id&search_value=${encodeURIComponent(tmdbId)}`,
     { signal: AbortSignal.timeout(10000) },
   )
   if (searchResponse.status === 429) throw new Error('Watchmode rate limit exceeded')
   if (!searchResponse.ok) throw new Error(`Watchmode title lookup failed: ${searchResponse.status}`)
   const searchData = (await searchResponse.json()) as {
-    title_results?: { id?: number; tmdb_id?: number }[]
-    results?: { id?: number; tmdb_id?: number }[]
+    title_results?: { id?: number; tmdb_id?: number; tmdb_movie_id?: number }[]
+    results?: { id?: number; tmdb_id?: number; tmdb_movie_id?: number }[]
   }
-  const match = [...(searchData.title_results || []), ...(searchData.results || [])].find((title) => title.tmdb_id === tmdbId)
+  const match = [...(searchData.title_results || []), ...(searchData.results || [])].find((title) => title.tmdb_movie_id === tmdbId || title.tmdb_id === tmdbId)
   if (!match?.id) return []
 
   const response = await fetch(
